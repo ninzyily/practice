@@ -1,0 +1,47 @@
+version: "3"
+
+##### SERVICES #####
+
+services:
+
+  crowdsec:
+    image: crowdsec:latest
+    restart: always
+    volumes:
+      - /var/log/nginx/:/var/log/nginx/
+      - /var/log/auth.log:/var/log/auth.log
+      - /var/log/syslog.log:/var/log/syslog.log
+      - ./crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml
+    environment:
+      COLLECTIONS: "crowdsecurity/nginx crowdsecurity/sshd"
+      BOUNCER_KEY_bouncer1: "edd5bd77b339f3059fae38419c902ed6"
+      AGENT_USERNAME: "container1"
+      AGENT_PASSWORD: "ijWDSzmPVLt2pVCNMUAS5MQohe3XF5eKfjjOwGi7a611D3wQR5OMLYp1cXX8LM51"
+    networks:
+      crowdsec:
+        ipv4_address: 172.0.0.1
+
+  monitoring:
+    build: ./crowdsec/dashboard
+    restart: always
+    ports:
+      - 3000:3000
+    environment:
+      MB_DB_FILE: /data/metabase.db
+      MGID: "${GID-1000}"
+    depends_on:
+      - 'crowdsec'
+    volumes:
+      - crowdsec-db:/metabase-data/
+    networks:
+      crowdsec:
+        ipv4_address: 172.0.0.2
+
+##### NETWORKS #####
+
+networks:
+  crowdsec:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.0.0.0/24
